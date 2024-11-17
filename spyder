@@ -1,0 +1,89 @@
+import mysql.connector
+
+# Configuração de conexão com o banco de dados
+db_config = {
+    'host': 'localhost',       # host do banco
+    'user': 'root',            # usuário
+    'password': '1234',        # senha
+    'database': 'mineracao'    # Nome do banco de dados
+}
+
+# Conectar ao banco de dados
+try:
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
+
+    # Criação da View
+    create_view_query = """
+    CREATE OR REPLACE VIEW resumo_pedidos AS
+    SELECT 
+        hora_pedido,
+        CASE 
+            WHEN hora_pedido < '20:00:00' THEN 'Inicio' 
+            WHEN hora_pedido BETWEEN '20:00:00' AND '22:00:00' THEN 'Pico' 
+            ELSE 'Fim' 
+        END AS movimento,
+        
+        CASE 
+            WHEN tipo_entrega > 0 THEN 'Sim' 
+            ELSE 'Não' 
+        END AS tipo_entrega,
+        
+        CASE 
+            WHEN valor_borda > 0 THEN 'Sim' 
+            ELSE 'Não' 
+        END AS valor_borda,
+        
+        CASE 
+            WHEN valor_refrigerante > 0 THEN 'Sim' 
+            ELSE 'Não' 
+        END AS valor_refrigerante,
+        
+        CASE 
+            WHEN tempo <= '00:30:00' THEN '<= 30'
+            WHEN tempo > '00:30:00' AND tempo <= '00:40:00' THEN '>30<40'
+            WHEN tempo > '00:40:00' THEN '>40'
+            ELSE 'ERROR: Verificação do tempo_gasto'
+        END AS tempo_gasto,
+        
+        valor_pizza,
+        CASE 
+            WHEN valor_pizza < 15 THEN '<15'
+            WHEN valor_pizza BETWEEN 15 AND 19 THEN '15-19'
+            WHEN valor_pizza BETWEEN 20 AND 23 THEN '20-23'
+            WHEN valor_pizza BETWEEN 24 AND 27 THEN '24-27'
+            WHEN valor_pizza BETWEEN 28 AND 31 THEN '28-31'
+            WHEN valor_pizza BETWEEN 32 AND 34 THEN '32-34'
+            WHEN valor_pizza BETWEEN 35 AND 38 THEN '35-38'
+            WHEN valor_pizza BETWEEN 39 AND 42 THEN '39-42'
+            WHEN valor_pizza BETWEEN 42 AND 46 THEN '42-46'
+            WHEN valor_pizza > 46 THEN '>46'
+            ELSE 'ERROR: Calculo do valor_pizza'
+        END AS valor_pizza_formato,
+        
+        tempo,
+        CASE
+            WHEN MINUTE(tempo) < 25 THEN '10-24'
+            WHEN MINUTE(tempo) BETWEEN 25 AND 40 THEN '25-40'
+            WHEN MINUTE(tempo) > 40 THEN '>40'
+            ELSE 'ERROR: Verificação do calculo do tempo'
+        END AS tempo_formatado
+    FROM pedidos;
+    """
+
+    # Executar o comando SQL para criar a view
+    cursor.execute(create_view_query)
+    conn.commit()
+
+    print("View criada com sucesso!")
+
+except mysql.connector.Error as err:
+    print(f"Erro: {err}")
+
+finally:
+    # Fechar conexão
+    if conn.is_connected():
+        cursor.close()
+        conn.close()
+        print("Conexão com o banco encerrada.")
+        
